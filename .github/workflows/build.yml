@@ -54,6 +54,11 @@ jobs:
           APK=$(find "$PROJECT/android/app/build/outputs/apk/debug" -name '*.apk' -type f -print -quit)
           unzip -l "$APK" | grep 'assets/roms/111kGbhhbliijXvVSg0gkwB2XYOwHdaPL.nes'
           ! unzip -l "$APK" | grep -E 'assets/updates/|UpdateClient|UpdateSecurity'
+      - name: Download previous signed APK for install compatibility test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download pixelflux-v1.0 --pattern PixelFlux-Android-signed.apk --dir baseline
       - name: Reclaim disposable runner disk before emulator boot
         run: |
           rm -rf "$PROJECT/android/core-NES-arm64-v8a" "$PROJECT/android/core-NES-x86_64"
@@ -232,4 +237,4 @@ jobs:
           test -f PixelFlux-Linux-x86_64.AppImage
           test -f PixelFlux-macOS-Apple-Silicon.zip
           sha256sum PixelFlux-* > SHA256SUMS.txt
-          gh release create pixelflux-v1.0 PixelFlux-Android-signed.apk PixelFlux-Windows-x64.exe PixelFlux-Linux-x86_64.AppImage PixelFlux-macOS-Apple-Silicon.zip SHA256SUMS.txt --title 'PixelFlux 1.0' --notes 'Single multicart, no updater. Windows and Linux binaries are unsigned; the macOS application is not notarized. Android is signed with the dedicated PixelFlux certificate. CI tests are not a substitute for physical-device testing.'
+          gh release create pixelflux-v1.1 PixelFlux-Android-signed.apk PixelFlux-Windows-x64.exe PixelFlux-Linux-x86_64.AppImage PixelFlux-macOS-Apple-Silicon.zip SHA256SUMS.txt --title 'PixelFlux 1.1' --notes 'Single multicart, no updater. Windows and Linux binaries are unsigned; the macOS application is not notarized. Android is signed with the dedicated PixelFlux certificate. CI tests are not a substitute for physical-device testing.'

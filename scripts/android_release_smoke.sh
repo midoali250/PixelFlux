@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-adb install PixelFlux-Android-signed.apk
+if [ -f baseline/PixelFlux-Android-signed.apk ]; then
+  adb install baseline/PixelFlux-Android-signed.apk
+  adb install -r PixelFlux-Android-signed.apk
+  echo 'PASS same-certificate v1.0 to v1.1 install'
+else
+  adb install PixelFlux-Android-signed.apk
+fi
 adb shell wm size 640x1280
 adb logcat -c
 adb shell am start -n com.pixelflux.app/com.bitvaultengine.retrocollection.MainActivity
@@ -28,12 +34,18 @@ def waitlog(text):
   if text in log():return
   time.sleep(1)
  raise RuntimeError('Log message missing: '+text)
-find('PixelFlux');tap(find('Settings'));tap(find('Reset entire app'));find('Reset entire app?');tap(find('Cancel'));tap(find('Close'));tap(find('About'));find('About PixelFlux');tap(find('Close'))
-tap(find('▶  Play'));waitlog('PLAYER_READY');time.sleep(3)
-first=Image.open(BytesIO(adb('exec-out','screencap','-p'))).convert('RGB');adb('shell','input','swipe','740','595','740','595','250');time.sleep(2)
+waitlog('PLAYER_READY');find('PixelFlux');find('Settings');find('About');find('Reset')
+adb('shell','uiautomator','dump','/sdcard/pixel-final-ui.xml');xml=adb('exec-out','cat','/sdcard/pixel-final-ui.xml').decode()
+if re.search(r'text="[^"]*\bPlay\b',xml,re.I):raise RuntimeError('Unexpected Play button on home screen')
+tap(find('Reset'));find('Reset entire app?');tap(find('Cancel'));tap(find('About'));find('About PixelFlux');tap(find('Close'))
+time.sleep(2);first=Image.open(BytesIO(adb('exec-out','screencap','-p'))).convert('RGB')
+green=sum(1 for r,g,b in first.crop((300,0,1280,640)).getdata() if g>100 and g>r*1.3 and g>b*1.2)
+if green<100:raise RuntimeError('Live green multicart menu not visible inside home screen')
+# The native surface occupies the right 77 percent of the landscape screen.
+adb('shell','input','swipe','860','595','860','595','250');time.sleep(2)
 second=Image.open(BytesIO(adb('exec-out','screencap','-p'))).convert('RGB')
 if not ImageChops.difference(first,second).getbbox():raise RuntimeError('No visible change after Start')
-adb('shell','input','tap','640','45');tap(find('Save stage / position'));tap(find('Slot 1'));waitlog('Saved slot 1')
-adb('shell','input','tap','640','45');tap(find('Load stage / position'));tap(find('Slot 1'));waitlog('Loaded slot 1')
-print('PASS signed Android APK: settings, canceled reset, About, play, Start, manual save and restore')
+tap(find('Settings'));tap(find('Save stage / position'));tap(find('Slot 1'));waitlog('Saved slot 1')
+tap(find('Settings'));tap(find('Load stage / position'));tap(find('Slot 1'));waitlog('Loaded slot 1')
+print('PASS signed Android: auto-open embedded menu, no Play button, About, reset cancel, Start, manual save and restore')
 PY
