@@ -58,7 +58,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh release download pixelflux-v1.1 --pattern PixelFlux-Android-signed.apk --dir baseline
+        run: gh release download pixelflux-v1.2 --pattern PixelFlux-Android-signed.apk --dir baseline
       - name: Reclaim disposable runner disk before emulator boot
         run: |
           rm -rf "$PROJECT/android/core-NES-arm64-v8a" "$PROJECT/android/core-NES-x86_64"
@@ -161,7 +161,7 @@ jobs:
         shell: pwsh
         run: |
           $app=Join-Path $env:PROJECT 'dist/PixelFlux.exe'
-          foreach ($argsLine in @('--smoke','--smoke --ci-game','--smoke --ci-controls','--smoke --ci-layout')) {
+          foreach ($argsLine in @('--smoke','--smoke --ci-game','--smoke --ci-controls','--smoke --ci-layout','--smoke --ci-turbo')) {
             $proc=Start-Process -Wait -PassThru -FilePath $app -ArgumentList $argsLine
             if ($proc.ExitCode -ne 0) { exit $proc.ExitCode }
           }
@@ -175,6 +175,7 @@ jobs:
           "$APP" --smoke --ci-game
           "$APP" --smoke --ci-controls
           "$APP" --smoke --ci-layout
+          "$APP" --smoke --ci-turbo
       - name: Package portable Linux AppImage
         if: matrix.platform == 'linux'
         shell: bash
@@ -186,8 +187,8 @@ jobs:
           printf '[Desktop Entry]\nType=Application\nName=PixelFlux\nExec=PixelFlux\nIcon=pixelflux\nCategories=Game;Emulator;\nTerminal=false\n' > AppDir/pixelflux.desktop
           printf '#!/bin/sh\nHERE="$(dirname "$(readlink -f "$0")")"\nexec "$HERE/usr/bin/PixelFlux" "$@"\n' > AppDir/AppRun
           chmod +x AppDir/AppRun
-          curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-          echo '62aebc77c2149e96b593b94da9bbd1881e0984a56399ff6d7a03b7ddd7c9ce68  appimagetool' | sha256sum -c -
+          curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool' | sha256sum -c -
           chmod +x appimagetool
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir PixelFlux-Linux-x86_64.AppImage
       - name: Package macOS ZIP
@@ -238,4 +239,4 @@ jobs:
           test -f PixelFlux-Linux-x86_64.AppImage
           test -f PixelFlux-macOS-Apple-Silicon.zip
           sha256sum PixelFlux-* > SHA256SUMS.txt
-          gh release create pixelflux-v1.2 PixelFlux-Android-signed.apk PixelFlux-Windows-x64.exe PixelFlux-Linux-x86_64.AppImage PixelFlux-macOS-Apple-Silicon.zip SHA256SUMS.txt --title 'PixelFlux 1.2' --notes 'Single multicart, no updater. Windows and Linux binaries are unsigned; the macOS application is not notarized. Android is signed with the dedicated PixelFlux certificate. CI tests are not a substitute for physical-device testing.'
+          gh release create pixelflux-v1.3 PixelFlux-Android-signed.apk PixelFlux-Windows-x64.exe PixelFlux-Linux-x86_64.AppImage PixelFlux-macOS-Apple-Silicon.zip SHA256SUMS.txt --title 'PixelFlux 1.3' --notes 'Single multicart, no updater. Windows and Linux binaries are unsigned; the macOS application is not notarized. Android is signed with the dedicated PixelFlux certificate. CI tests are not a substitute for physical-device testing.'
