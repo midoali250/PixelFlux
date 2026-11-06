@@ -5,21 +5,26 @@ PKG=com.pixelflux.app
 ACT=com.bitvaultengine.retrocollection.MainActivity
 adb install "$APK"
 adb shell wm size 640x1280
+adb logcat -G 16M || true
 adb logcat -c
 adb shell am start -n "$PKG/$ACT" --ez pixel_ci_smoke true
-for i in $(seq 1 60); do if adb logcat -d -s AKG_ANDROID:I | grep -q PLAYER_READY;then break;fi;sleep 2;done
-adb logcat -d -s AKG_ANDROID:I | grep -q PLAYER_READY
-adb shell input swipe 50 270 115 270 250
-for XY in '1152 448' '1024 512' '1024 384' '896 448';do read -r X Y <<< "$XY";adb shell input swipe "$X" "$Y" "$X" "$Y" 220;done
-for i in $(seq 1 90); do if adb logcat -d -s AKG_ANDROID_SMOKE:I | grep -q PASS;then break;fi;sleep 2;done
+for i in $(seq 1 60); do if adb logcat -d -s AKG_ANDROID:I | grep PLAYER_READY >/dev/null;then break;fi;sleep 2;done
+adb logcat -d -s AKG_ANDROID:I | grep PLAYER_READY >/dev/null
+adb shell input swipe 50 270 115 270 350
+adb logcat -d -s AKG_ANDROID_INPUT:I | tr -d '\r' > "${RUNNER_TEMP:-/tmp}/pixel-input.log"
+grep -q 'core=128$' "${RUNNER_TEMP:-/tmp}/pixel-input.log" || { echo 'FAIL: joystick direction did not reach the core';exit 1; }
+for DATA in '1152 448 1' '1024 512 2' '1024 384 4' '896 448 8';do
+ read -r X Y FACE <<< "$DATA";adb shell input swipe "$X" "$Y" "$X" "$Y" 300
+ adb logcat -d -s AKG_ANDROID_TOUCH:I > "${RUNNER_TEMP:-/tmp}/pixel-touch.log"
+ grep -q "faces=$FACE" "${RUNNER_TEMP:-/tmp}/pixel-touch.log" || { echo "FAIL: face button $FACE not recorded";exit 1; }
+done
+for i in $(seq 1 90); do if adb logcat -d -s AKG_ANDROID_SMOKE:I | grep 'PASS' >/dev/null;then break;fi;sleep 2;done
 adb logcat -d -s AKG_ANDROID_SMOKE:I | grep PASS
-for FACE in 1 2 4 8;do adb logcat -d -s AKG_ANDROID_TOUCH:I | grep -q "faces=$FACE";done
-adb logcat -d -s AKG_ANDROID_INPUT:I | tr -d '\r' | grep -q 'core=128$'
 echo 'PASS PixelFlux Android four face controls and free joystick reached core'
 echo "PASS debug game input smoke"
 adb shell am force-stop "$PKG";adb logcat -c;adb shell am start -n "$PKG/$ACT"
-for i in $(seq 1 40); do if adb logcat -d -s AKG_ANDROID:I | grep -q PLAYER_READY;then break;fi;sleep 2;done
-adb logcat -d -s AKG_ANDROID:I | grep -q PLAYER_READY
+for i in $(seq 1 40); do if adb logcat -d -s AKG_ANDROID:I | grep PLAYER_READY >/dev/null;then break;fi;sleep 2;done
+adb logcat -d -s AKG_ANDROID:I | grep PLAYER_READY >/dev/null
 python3 - <<'PY'
 import subprocess,time,xml.etree.ElementTree as ET,re
 for _ in range(15):
@@ -35,8 +40,8 @@ for _ in range(15):
 else:raise RuntimeError('Embedded home screen failed')
 PY
 adb shell input swipe 860 595 860 595 250
-for i in $(seq 1 20); do if adb logcat -d -s PIXELFLUX_LAYOUT:I | grep -q GAME_FULLSCREEN;then break;fi;sleep 1;done
-adb logcat -d -s PIXELFLUX_LAYOUT:I | grep -q GAME_FULLSCREEN
+for i in $(seq 1 20); do if adb logcat -d -s PIXELFLUX_LAYOUT:I | grep GAME_FULLSCREEN >/dev/null;then break;fi;sleep 1;done
+adb logcat -d -s PIXELFLUX_LAYOUT:I | grep GAME_FULLSCREEN >/dev/null
 adb shell input tap 640 45
 python3 - <<'PY'
 import subprocess,time,re,xml.etree.ElementTree as ET
@@ -51,6 +56,6 @@ def tap_text(text):
  raise RuntimeError('Menu item unavailable: '+text)
 tap_text('Back to cartridge menu');tap_text('Return to menu')
 PY
-for i in $(seq 1 20); do if adb logcat -d -s PIXELFLUX_LAYOUT:I | grep -q CORE_RESET;then break;fi;sleep 1;done
-adb logcat -d -s PIXELFLUX_LAYOUT:I | grep -q CORE_RESET
+for i in $(seq 1 20); do if adb logcat -d -s PIXELFLUX_LAYOUT:I | grep CORE_RESET >/dev/null;then break;fi;sleep 1;done
+adb logcat -d -s PIXELFLUX_LAYOUT:I | grep CORE_RESET >/dev/null
 echo 'PASS Android expands on Start and returns to cartridge menu'
